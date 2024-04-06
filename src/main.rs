@@ -3,6 +3,10 @@
 // Allow pedantic lints that are a little _too_ pedantic.
 #![allow(clippy::cast_precision_loss)]
 
+mod lex;
+mod parse;
+mod tokens;
+
 use std::collections::HashMap;
 
 use color_eyre::eyre::{eyre, Result};
