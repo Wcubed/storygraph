@@ -1,0 +1,1 @@
+Program to create and display timeline charts of stories, such as in [xkcd: Movie Narrative Charts](https://xkcd.com/657/).
