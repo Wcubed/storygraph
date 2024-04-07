@@ -32,9 +32,16 @@ struct GraphApp {
 
 impl GraphApp {
     fn new(_cc: &eframe::CreationContext<'_>) -> Self {
+        let mut colors = HashMap::new();
+        colors.insert("t-rex", Color32::RED);
+        colors.insert("raptor1", Color32::RED);
+        colors.insert("raptor2", Color32::RED);
+        colors.insert("raptor3", Color32::RED);
+
         Self {
             story: Story {
                 // Test data: Jurassic park, taken from the xkcd comic.
+                colors,
                 beats: vec![
                     Beat::Groups(vec![
                         vec!["t-rex"],
@@ -174,16 +181,17 @@ fn display_story(ui: &mut Ui, story: &Story) {
     /// Distance between people in a group.
     const IN_GROUP_Y_DISTANCE: f32 = 10.0;
     /// Distance between groups.
-    const INTER_GROUP_Y_DISTANCE: f32 = 24.0;
-    const STROKE_WIDTH: f32 = 6.0;
+    const INTER_GROUP_Y_DISTANCE: f32 = 50.0;
+    const STROKE_WIDTH: f32 = 5.0;
     const BACKGROUND_STROKE_WIDTH: f32 = STROKE_WIDTH + 4.0;
     const FONT_SIZE: f32 = 10.0;
     const NAME_EVERY_N_STRAIGHTS: usize = 4;
 
     let background_stroke = Stroke::new(BACKGROUND_STROKE_WIDTH, ui.visuals().window_fill);
 
+    let mut colors = story.colors.clone();
     // Keeps track of current "on stage" people, and their last y coordinate.
-    let mut persons: HashMap<&'static str, (Color32, f32)> = HashMap::new();
+    let mut persons: HashMap<&'static str, f32> = HashMap::new();
 
     egui::ScrollArea::both()
         .auto_shrink([false, false])
@@ -214,12 +222,16 @@ fn display_story(ui: &mut Ui, story: &Story) {
                         for group in groups {
                             for (index, name) in group.iter().enumerate() {
                                 // TODO (2024-04-07): Fade in a new persons line.
-                                let (color, old_y) = persons
+                                let old_y = persons
                                     .get(name)
                                     .copied()
                                     // A new person's line appears at the desired y location.
-                                    .unwrap_or((auto_color(persons.len()), current_y));
-                                persons.insert(name, (color, current_y));
+                                    .unwrap_or(current_y);
+                                persons.insert(name, current_y);
+
+                                let known_color_len = colors.len();
+                                let color =
+                                    *colors.entry(name).or_insert(auto_color(known_color_len));
 
                                 let stroke = Stroke::new(STROKE_WIDTH, color);
                                 let points = [
@@ -281,7 +293,7 @@ fn display_story(ui: &mut Ui, story: &Story) {
             // First draw the backgrounds for the texts, that way, one text background does not
             // draw over another text.
             for (_, rect) in texts.iter() {
-                paint.rect_filled(rect.clone(), 0.0, ui.visuals().window_fill);
+                paint.rect_filled(*rect, 0.0, ui.visuals().window_fill);
             }
             for (galley, rect) in texts.into_iter() {
                 paint.galley(rect.min, galley, ui.visuals().text_color());
@@ -291,6 +303,9 @@ fn display_story(ui: &mut Ui, story: &Story) {
 
 #[derive(Debug)]
 struct Story {
+    /// Map of persons and the color of their line.
+    /// If a person is not in the map, they will get a color auto-assigned.
+    colors: HashMap<&'static str, Color32>,
     beats: Vec<Beat>,
 }
 
