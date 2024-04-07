@@ -176,6 +176,9 @@ fn display_story(ui: &mut Ui, story: &Story) {
     /// Distance between groups.
     const INTER_GROUP_Y_DISTANCE: f32 = 24.0;
     const STROKE_WIDTH: f32 = 3.0;
+    const BACKGROUND_STROKE_WIDTH: f32 = STROKE_WIDTH + 2.0;
+
+    let background_stroke = Stroke::new(BACKGROUND_STROKE_WIDTH, ui.visuals().window_fill);
 
     // Keeps track of current "on stage" people, and their last y coordinate.
     let mut persons: HashMap<&'static str, (Color32, f32)> = HashMap::new();
@@ -215,18 +218,27 @@ fn display_story(ui: &mut Ui, story: &Story) {
                                 persons.insert(name, (color, current_y));
 
                                 let stroke = Stroke::new(STROKE_WIDTH, color);
+                                let points = [
+                                    Pos2::new(old_x, old_y),
+                                    Pos2::new(middle_x, old_y),
+                                    Pos2::new(middle_x, current_y),
+                                    Pos2::new(current_x, current_y),
+                                ];
+
+                                let background_bezier = CubicBezierShape::from_points_stroke(
+                                    points,
+                                    false,
+                                    Color32::TRANSPARENT,
+                                    background_stroke,
+                                );
+                                paint.add(background_bezier);
+
                                 let bezier = CubicBezierShape::from_points_stroke(
-                                    [
-                                        Pos2::new(old_x, old_y),
-                                        Pos2::new(middle_x, old_y),
-                                        Pos2::new(middle_x, current_y),
-                                        Pos2::new(current_x, current_y),
-                                    ],
+                                    points,
                                     false,
                                     Color32::TRANSPARENT,
                                     stroke,
                                 );
-
                                 paint.add(bezier);
 
                                 // Add a straight segment in between each curved section.
