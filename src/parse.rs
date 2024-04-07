@@ -1,9 +1,8 @@
-use logos::Logos;
-
-use crate::tokens::Token;
+use crate::{lex::Lexer, tokens::Token};
+use color_eyre::Result;
 
 fn parse(input: &str) {
-    let mut lex = Token::lexer(input);
+    let mut lex = Lexer::new(input);
 }
 
 #[cfg(test)]

@@ -38,12 +38,8 @@ impl GraphApp {
         Self {
             story: Story {
                 beats: vec![
-                    Beat::Appear("John".to_string()),
-                    Beat::Appear("Peter".to_string()),
-                    Beat::Meet("John".to_string(), "Peter".to_string()),
-                    Beat::Appear("Klaas".to_string()),
-                    Beat::Meet("Peter".to_string(), "Klaas".to_string()),
-                    Beat::Meet("Klaas".to_string(), "John".to_string()),
+                    Beat::Groups(vec![vec!["klaas", "piet"], vec!["henk"]]),
+                    Beat::Groups(vec![vec!["klaas"], vec!["piet", "henk"]]),
                 ],
             },
         }
@@ -57,14 +53,19 @@ impl eframe::App for GraphApp {
 }
 
 fn display_story(ui: &mut Ui, story: &Story) {
+    const X_PADDING: f32 = 10.0;
+    const Y_PADDING: f32 = 10.0;
     /// How far each story beat progresses
     const BEAT_X_DISTANCE: f32 = 50.0;
+    /// Distance between people in a group.
+    const IN_GROUP_Y_DISTANCE: f32 = 6.0;
+    /// Distance between groups.
+    const INTER_GROUP_Y_DISTANCE: f32 = 24.0;
     const STROKE_WIDTH: f32 = 3.0;
 
     // Keeps track of current "on stage" people, and their last y coordinate.
-    let mut persons: HashMap<String, (Color32, f32)> = HashMap::new();
-    let mut auto_color_index = 1;
-    let mut x_coordinate = 10.0;
+    let mut persons: HashMap<&'static str, (Color32, f32)> = HashMap::new();
+    let mut current_x = X_PADDING;
 
     egui::ScrollArea::both()
         .auto_shrink([false, false])
@@ -73,50 +74,44 @@ fn display_story(ui: &mut Ui, story: &Story) {
 
             for beat in &story.beats {
                 match beat {
-                    Beat::Appear(name) => {
-                        persons.insert(
-                            name.clone(),
-                            (auto_color(auto_color_index), auto_color_index as f32 * 20.0),
-                        );
-                        auto_color_index += 1;
-                    }
-                    Beat::Meet(one, other) => {
-                        let x_old = x_coordinate;
-                        x_coordinate += BEAT_X_DISTANCE;
+                    Beat::Groups(groups) => {
+                        let mut current_y = Y_PADDING;
+                        let old_x = current_x;
+                        current_x += BEAT_X_DISTANCE;
 
-                        // TODO (2024-04-06): Error handling? Or auto-create a new person.
-                        let (color_one, y_one) = persons
-                            .get(one)
-                            .copied()
-                            .expect("Person does not exist at this point");
-                        let (color_other, y_other) = persons
-                            .get_mut(other)
-                            .expect("Person does not exist at this point");
+                        // Middle position between old_x and current_x, for drawing a bezier curve.
+                        let middle_x = old_x + (current_x - old_x) / 2.0;
 
-                        paint.line_segment(
-                            [Pos2::new(x_old, y_one), Pos2::new(x_coordinate, y_one)],
-                            Stroke::new(STROKE_WIDTH, color_one),
-                        );
+                        for group in groups {
+                            for (index, name) in group.iter().enumerate() {
+                                let (color, old_y) = persons
+                                    .get(name)
+                                    .copied()
+                                    // A new person's line appears at the desired y location.
+                                    .unwrap_or((auto_color(persons.len()), current_y));
+                                persons.insert(name, (color, current_y));
 
-                        let previous_y = *y_other;
-                        // TODO (2024-04-06): Determine how far grouped people should be from each other.
-                        *y_other = y_one + 5.0;
+                                let bezier = CubicBezierShape::from_points_stroke(
+                                    [
+                                        Pos2::new(old_x, old_y),
+                                        Pos2::new(middle_x, old_y),
+                                        Pos2::new(middle_x, current_y),
+                                        Pos2::new(current_x, current_y),
+                                    ],
+                                    false,
+                                    Color32::TRANSPARENT,
+                                    Stroke::new(STROKE_WIDTH, color),
+                                );
 
-                        let middle_x = x_old + ((x_coordinate - x_old) / 2.0);
+                                paint.add(bezier);
 
-                        let bezier = CubicBezierShape::from_points_stroke(
-                            [
-                                Pos2::new(x_old, previous_y),
-                                Pos2::new(middle_x, previous_y),
-                                Pos2::new(middle_x, *y_other),
-                                Pos2::new(x_coordinate, *y_other),
-                            ],
-                            false,
-                            Color32::TRANSPARENT,
-                            Stroke::new(STROKE_WIDTH, *color_other),
-                        );
+                                if index < group.len() {
+                                    current_y += IN_GROUP_Y_DISTANCE;
+                                }
+                            }
 
-                        paint.add(bezier);
+                            current_y += INTER_GROUP_Y_DISTANCE;
+                        }
                     }
                 }
             }
@@ -130,8 +125,8 @@ struct Story {
 
 #[derive(Debug)]
 enum Beat {
-    Appear(String),
-    Meet(String, String),
+    /// A list of all groups of currently existing characters, in the order that they should be displayed.
+    Groups(Vec<Vec<&'static str>>),
 }
 
 /// Algorithm from [egui_plot](https://github.com/emilk/egui/blob/master/crates/egui_plot/src/plot_ui.rs#L16)
