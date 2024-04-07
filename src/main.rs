@@ -8,8 +8,8 @@ use std::collections::HashMap;
 
 use color_eyre::eyre::{eyre, Result};
 use eframe::{
-    egui::{self, Color32, Pos2, Sense, Stroke, Ui, Vec2},
-    epaint::{CubicBezierShape, Hsva},
+    egui::{self, Align2, Color32, FontId, Pos2, Sense, Stroke, Ui, Vec2},
+    epaint::{text, CubicBezierShape, Hsva},
 };
 
 fn main() -> Result<()> {
@@ -169,14 +169,16 @@ impl eframe::App for GraphApp {
 fn display_story(ui: &mut Ui, story: &Story) {
     const X_PADDING: f32 = 10.0;
     const Y_PADDING: f32 = 10.0;
-    const CURVE_X_DISTANCE: f32 = 50.0;
-    const STRAIGHT_X_DISTANCE: f32 = 25.0;
+    const CURVE_X_DISTANCE: f32 = 70.0;
+    const STRAIGHT_X_DISTANCE: f32 = 50.0;
     /// Distance between people in a group.
-    const IN_GROUP_Y_DISTANCE: f32 = 5.0;
+    const IN_GROUP_Y_DISTANCE: f32 = 10.0;
     /// Distance between groups.
     const INTER_GROUP_Y_DISTANCE: f32 = 24.0;
-    const STROKE_WIDTH: f32 = 3.0;
-    const BACKGROUND_STROKE_WIDTH: f32 = STROKE_WIDTH + 2.0;
+    const STROKE_WIDTH: f32 = 6.0;
+    const BACKGROUND_STROKE_WIDTH: f32 = STROKE_WIDTH + 4.0;
+    const FONT_SIZE: f32 = 10.0;
+    const NAME_EVERY_N_STRAIGHTS: usize = 4;
 
     let background_stroke = Stroke::new(BACKGROUND_STROKE_WIDTH, ui.visuals().window_fill);
 
@@ -196,8 +198,10 @@ fn display_story(ui: &mut Ui, story: &Story) {
             let mut current_x = rect.left() + X_PADDING;
 
             let paint = ui.painter();
+            // We paint the text as last, so it draws over lines.
+            let mut texts = vec![];
 
-            for beat in &story.beats {
+            for (beat_num, beat) in story.beats.iter().enumerate() {
                 match beat {
                     Beat::Groups(groups) => {
                         let mut current_y = Y_PADDING;
@@ -249,6 +253,18 @@ fn display_story(ui: &mut Ui, story: &Story) {
                                     stroke,
                                 );
 
+                                if beat_num % NAME_EVERY_N_STRAIGHTS == 0 {
+                                    // Add the name of the person for later drawing
+                                    let galley = paint.layout_no_wrap(
+                                        name.to_string(),
+                                        FontId::proportional(FONT_SIZE),
+                                        ui.visuals().text_color(),
+                                    );
+                                    let rect = Align2::LEFT_CENTER
+                                        .anchor_size(Pos2::new(old_x, current_y), galley.size());
+                                    texts.push((galley, rect));
+                                }
+
                                 if index < group.len() {
                                     current_y += IN_GROUP_Y_DISTANCE;
                                 }
@@ -260,6 +276,15 @@ fn display_story(ui: &mut Ui, story: &Story) {
                         current_x += STRAIGHT_X_DISTANCE;
                     }
                 }
+            }
+
+            // First draw the backgrounds for the texts, that way, one text background does not
+            // draw over another text.
+            for (_, rect) in texts.iter() {
+                paint.rect_filled(rect.clone(), 0.0, ui.visuals().window_fill);
+            }
+            for (galley, rect) in texts.into_iter() {
+                paint.galley(rect.min, galley, ui.visuals().text_color());
             }
         });
 }
