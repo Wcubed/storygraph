@@ -177,14 +177,14 @@ fn display_story(ui: &mut Ui, story: &Story) {
     const X_PADDING: f32 = 10.0;
     const Y_PADDING: f32 = 10.0;
     const CURVE_X_DISTANCE: f32 = 70.0;
-    const STRAIGHT_X_DISTANCE: f32 = 50.0;
+    const STRAIGHT_X_DISTANCE: f32 = 100.0;
     /// Distance between people in a group.
-    const IN_GROUP_Y_DISTANCE: f32 = 10.0;
+    const IN_GROUP_Y_DISTANCE: f32 = 5.0;
     /// Distance between groups.
     const INTER_GROUP_Y_DISTANCE: f32 = 50.0;
-    const STROKE_WIDTH: f32 = 5.0;
-    const BACKGROUND_STROKE_WIDTH: f32 = STROKE_WIDTH + 4.0;
-    const FONT_SIZE: f32 = 10.0;
+    const STROKE_WIDTH: f32 = 1.0;
+    const BACKGROUND_STROKE_WIDTH: f32 = STROKE_WIDTH + 2.0;
+    const FONT_SIZE: f32 = 8.0;
     const NAME_EVERY_N_STRAIGHTS: usize = 4;
 
     let background_stroke = Stroke::new(BACKGROUND_STROKE_WIDTH, ui.visuals().window_fill);
